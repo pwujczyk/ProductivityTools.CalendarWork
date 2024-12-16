@@ -1,13 +1,19 @@
-DAYS_PAST = 1
-DAYS_FUTURE = 0
-var DAY = 24 * 60 * 60 * 1000;  // ms
-var NOW = new Date().setHours(0,0,0,0);;
-var START_DATE = new Date(NOW.getTime() - DAYS_PAST * DAY);
-var END_DATE = new Date(NOW.getTime() + DAYS_FUTURE * DAY);
 
-var caledarIds = ['c_0f4cb3f8b97b7a808d0da14c2a98dee84e6612cef687984a70959059b1fa33b2@group.calendar.google.com', 'pwujczyk@google.com']
+
+var caledarIds = ['c_0f4cb3f8b97b7a808d0da14c2a98dee84e6612cef687984a70959059b1fa33b2@group.calendar.google.com'
+  , 'c_61629aa73c878650c1e66cefeefa354bb85696005a69c45fc7b3f2bf2f8130c3@group.calendar.google.com'
+  , 'pwujczyk@google.com']
 
 function process() {
+  DAYS_PAST = 1
+  DAYS_FUTURE = 0
+  var DAY = 24 * 60 * 60 * 1000;  // ms
+  var NOW = new Date();
+  NOW.setHours(0, 0, 0, 0);
+  var START_DATE = new Date(NOW.getTime() - (1 + DAYS_PAST) * DAY);
+  var END_DATE = new Date(NOW.getTime() + (1 + DAYS_FUTURE) * DAY);
+
+
   var start = START_DATE;
   var end = END_DATE;
   clearToday(start, end);
@@ -38,18 +44,45 @@ function processCalendar(calendarId, start, end) {
     var title = event.getTitle();
     var color = event.getColor();
     var day = Utilities.formatDate(start, 'Europe/Warsaw', 'yyyy-MM-dd');
-    var dayLog = { start: start, end: end, day: day, duration: duration, title: title, category: calendarName, status: status, type: type, color: color }
+    var dayLog = { start: start, end: end, day: day, duration: duration, title: title, calendarName: calendarName, status: status, type: type, color: color }
     //console.log(dayLog);
-    SaveItem(dayLog)
+    var dayLog = { ...dayLog, category: getCategory(dayLog) }
+
+    //collor=1 - do not count
+    if (type != "WORKING_LOCATION" && type != "OUT_OF_OFFICE" && status != "INVITED" && status != "NO" && color != 1) {
+      SaveItem(dayLog)
+    }
+
 
   }
   return entries;
 }
 
+function getCategory(dayLog) {
+  if (dayLog.title == "Emails") {
+    return "Emails"
+  }
+  if (dayLog.calendarName == "SelfDevelopment") {
+    return "SelfDevelopment"
+  }
+  if (dayLog.calendarName == "IndividualProjectWork") {
+    return "IndividualProjectWork"
+  }
+  if (dayLog.color == 9) {
+    return "One2One"
+  }
+  if (dayLog.calendarName == 'DataPoints') {
+    return "Work"
+  }
+  if (dayLog.calendarName == 'pwujczyk@google.com') {
+    return "Meeting"
+  }
+}
+
 
 function SaveItem(dayLog) {
 
-  getSheet().appendRow([dayLog.start, dayLog.end, dayLog.day, dayLog.duration, dayLog.title, dayLog.category, dayLog.status, dayLog.type, dayLog.color]);
+  getSheet().appendRow([dayLog.start, dayLog.end, dayLog.day, dayLog.duration, dayLog.title, dayLog.calendarName, dayLog.status, dayLog.type, dayLog.color, dayLog.category]);
 }
 
 function getSheet() {
@@ -58,7 +91,7 @@ function getSheet() {
   return daily;
 }
 
-function clearToday(sheet, start, end) {
+function clearToday(start, end) {
   var sheet = getSheet()
   var data = sheet.getDataRange().getValues();
   for (i = data.length - 1; i > 0; i--) {
