@@ -4,17 +4,18 @@ var caledarIds = ['c_0f4cb3f8b97b7a808d0da14c2a98dee84e6612cef687984a70959059b1f
   , 'c_61629aa73c878650c1e66cefeefa354bb85696005a69c45fc7b3f2bf2f8130c3@group.calendar.google.com'
   , 'c_c836fe4957a38740ddbd08a2b537cee5f9b630b97e5862f01d99dff0719b4ee5@group.calendar.google.com'
   , 'c_833af64a3dc6013a751692a881ef3f8b8e39f27751fb2fc2acb00b416505e0b3@group.calendar.google.com'
+  , 'c_9ad969d46441f6da4e92934b0a43a4c395c6724d74df8f4fee38f2427699b891@group.calendar.google.com'
   , 'pwujczyk@google.com']
 
 function process() {
-   daysOffsetStart= 0
+  daysOffsetStart = 0
   //daysOffsetEnd = 0
-  var MINUTE=60 * 1000;
+  var MINUTE = 60 * 1000;
   var DAY = 24 * 60 * MINUTE;  // ms
   var NOW = new Date();
   NOW.setHours(0, 0, 0, 0);
-  var START_DATE = new Date(NOW.getTime() + ( daysOffsetStart) * DAY);
-  var END_DATE = new Date(NOW.getTime() + ( 1+daysOffsetStart) * DAY - MINUTE);
+  var START_DATE = new Date(NOW.getTime() + (daysOffsetStart) * DAY);
+  var END_DATE = new Date(NOW.getTime() + (1 + daysOffsetStart) * DAY - MINUTE);
 
 
   var start = START_DATE;
@@ -34,31 +35,30 @@ function processCalendar(calendarId, start, end) {
 
   var entries = {};
   for (var e = 0; e < events.length; e++) {
-        var event = events[e];
+    var event = events[e];
 
-     var end = event.getEndTime();
 
-    // var formatEnd=Utilities.formatDate(end, 'Europe/Warsaw', 'HH-mm-ss');
-    // console.log(formatEnd);
-    // if (formatEnd=="00-00-00"){
-    //   continue
-    // }
+
     var status = event.getMyStatus().toString();
     var type = event.getEventType().toString();
     var start = event.getStartTime();
-    var xx=event.getGuestList()
-   
-    var duration = (end - start) / 3600000;
+    var end = event.getEndTime();
+
     var title = event.getTitle();
+
+
+
+    var duration = (end - start) / 3600000;
     var color = event.getColor();
     var day = Utilities.formatDate(start, 'Europe/Warsaw', 'yyyy-MM-dd');
     var dayLog = { start: start, end: end, day: day, duration: duration, title: title, calendarName: calendarName, status: status, type: type, color: color }
     //console.log(dayLog);
-    var category=getCategory(dayLog)
-    var dayLog = { ...dayLog, category:category  }
+    var category = getCategory(dayLog)
+    var dayLog = { ...dayLog, category: category }
 
     //collor=1 - do not count
-    if (type != "WORKING_LOCATION" && type != "OUT_OF_OFFICE" && status != "INVITED" && status != "NO" && color != 1) {
+    var ownerAcceptedValue = ownerAccepted(event, calendarName, 'pwujczyk@google.com')
+    if (type != "WORKING_LOCATION" && type != "OUT_OF_OFFICE" && status != "INVITED" && status != "NO" && color != 1 && ownerAcceptedValue) {
       SaveItem(dayLog)
     }
 
@@ -67,38 +67,53 @@ function processCalendar(calendarId, start, end) {
   return entries;
 }
 
+function ownerAccepted(event, calendarName, owner) {
+
+  if (calendarName != owner) {
+    return true;
+  }
+
+
+  var guestList = event.getGuestList();
+  //calendar item without anybody invited
+  if (guestList.length == 0) {
+    return true;
+  }
+  var pwujczykAccepted = guestList.filter(function (guest) { return guest.getEmail() == 'pwujczyk@google.com' && guest.getGuestStatus() === CalendarApp.GuestStatus.YES; });
+  if (pwujczykAccepted.length > 0) {
+    return true;
+  }
+}
+
 
 function getCategory(dayLog) {
-  var configuration=LoadConfiguration();
+  var configuration = LoadConfiguration();
   for (var e = 0; e < configuration.length; e++) {
-  var conf=configuration[e];
-  if (conf.column=="Title") {
-      if (dayLog.title==conf.value)
-      {
-        var returnValue=conf.category
+    var conf = configuration[e];
+    if (conf.column == "Title") {
+      if (dayLog.title == conf.value) {
+        var returnValue = conf.category
         return returnValue;
       }
     }
 
 
-   if (conf.column=="Color") {
-      if (dayLog.color==conf.value)
-      {
-        var returnValue=conf.category
+    if (conf.column == "Color") {
+      if (dayLog.color == conf.value) {
+        var returnValue = conf.category
         return returnValue;
       }
     }
-  
 
-    if (conf.column=="CalendarName") {
-      if (dayLog.calendarName==conf.value)
-      {
-        var returnValue=conf.category
+
+    if (conf.column == "CalendarName") {
+      if (dayLog.calendarName == conf.value) {
+        var returnValue = conf.category
         return returnValue;
       }
     }
-    
-  } 
+
+  }
 }
 
 function LoadConfiguration() {
