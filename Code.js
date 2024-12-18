@@ -45,6 +45,7 @@ function processCalendar(calendarId, start, end) {
     var end = event.getEndTime();
 
     var title = event.getTitle();
+    console.log(title);
 
 
 
@@ -58,6 +59,13 @@ function processCalendar(calendarId, start, end) {
 
     //collor=1 - do not count
     var ownerAcceptedValue = ownerAccepted(event, calendarName, 'pwujczyk@google.com')
+  var myStatus=event.getMyStatus()==CalendarApp.GuestStatus.YES;
+    var myStatus1=event.getMyStatus()==CalendarApp.GuestStatus.NO;
+    var myStatus2=event.getMyStatus()==CalendarApp.GuestStatus.OWNER;
+
+
+    var x2=event.isOwnedByMe();
+    console.log("ownerAcceptedValue",ownerAcceptedValue)
     if (type != "WORKING_LOCATION" && type != "OUT_OF_OFFICE" && status != "INVITED" && status != "NO" && color != 1 && ownerAcceptedValue) {
       SaveItem(dayLog)
     }
@@ -73,16 +81,47 @@ function ownerAccepted(event, calendarName, owner) {
     return true;
   }
 
-
-  var guestList = event.getGuestList();
+    var guestList = event.getGuestList();
   //calendar item without anybody invited
   if (guestList.length == 0) {
     return true;
   }
-  var pwujczykAccepted = guestList.filter(function (guest) { return guest.getEmail() == 'pwujczyk@google.com' && guest.getGuestStatus() === CalendarApp.GuestStatus.YES; });
-  if (pwujczykAccepted.length > 0) {
-    return true;
-  }
+
+var pwujczykAccepted=event.getGuestList(true).some(g => 
+  g.getEmail() == "pwujczyk@google.com" &&
+  g.getGuestStatus() == CalendarApp.GuestStatus.YES);
+
+  return pwujczykAccepted;
+//  var myStatus=event.getMyStatus();
+//  var mystatus=event.getMyStatus()== CalendarApp.GuestStatus.OWNER;
+//   if (event.getMyStatus()== CalendarApp.GuestStatus.OWNER)
+//   {
+//     return true
+//   }
+
+//     if (event.getMyStatus()== CalendarApp.GuestStatus.YES)
+//   {
+//     return true
+//   }
+
+
+//   var pwujczykAccepted = guestList.filter(function (guest) { return guest.getEmail() == 'pwujczyk@google.com' && guest.getGuestStatus() === CalendarApp.GuestStatus.YES; });
+//   if (pwujczykAccepted.length > 0) {
+//     return true;
+//   }
+
+
+  //  for (var i = 0; i < guestList.length; i++) {
+  //     var guest = guestList[i];
+
+  //     var dsfa = guest.getEmail();
+  //     var xxx=guest.getName();
+  //     var x1 = guest.getGuestStatus() === CalendarApp.GuestStatus.YES;
+
+  //     var guestStatus = guest.getGuestStatus()
+  //     var yes = guestStatus.YES.toString();
+  //     console.log("GuestStatus")
+  //   }
 }
 
 
