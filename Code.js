@@ -7,8 +7,15 @@ var caledarIds = ['c_0f4cb3f8b97b7a808d0da14c2a98dee84e6612cef687984a70959059b1f
   , 'c_9ad969d46441f6da4e92934b0a43a4c395c6724d74df8f4fee38f2427699b891@group.calendar.google.com'
   , 'pwujczyk@google.com']
 
-function process() {
-  daysOffsetStart = 0
+function executeForToday() {
+  execute(0)
+}
+function executeForYesterday() {
+  execute(-1)
+}
+
+
+function execute(daysOffsetStart) {
   //daysOffsetEnd = 0
   var MINUTE = 60 * 1000;
   var DAY = 24 * 60 * MINUTE;  // ms
@@ -59,13 +66,13 @@ function processCalendar(calendarId, start, end) {
 
     //collor=1 - do not count
     var ownerAcceptedValue = ownerAccepted(event, calendarName, 'pwujczyk@google.com')
-  var myStatus=event.getMyStatus()==CalendarApp.GuestStatus.YES;
-    var myStatus1=event.getMyStatus()==CalendarApp.GuestStatus.NO;
-    var myStatus2=event.getMyStatus()==CalendarApp.GuestStatus.OWNER;
+    var myStatus = event.getMyStatus() == CalendarApp.GuestStatus.YES;
+    var myStatus1 = event.getMyStatus() == CalendarApp.GuestStatus.NO;
+    var myStatus2 = event.getMyStatus() == CalendarApp.GuestStatus.OWNER;
 
 
-    var x2=event.isOwnedByMe();
-    console.log("ownerAcceptedValue",ownerAcceptedValue)
+    var x2 = event.isOwnedByMe();
+    console.log("ownerAcceptedValue", ownerAcceptedValue)
     if (type != "WORKING_LOCATION" && type != "OUT_OF_OFFICE" && status != "INVITED" && status != "NO" && color != 1 && ownerAcceptedValue) {
       SaveItem(dayLog)
     }
@@ -81,34 +88,34 @@ function ownerAccepted(event, calendarName, owner) {
     return true;
   }
 
-    var guestList = event.getGuestList();
+  var guestList = event.getGuestList();
   //calendar item without anybody invited
   if (guestList.length == 0) {
     return true;
   }
 
-var pwujczykAccepted=event.getGuestList(true).some(g => 
-  g.getEmail() == "pwujczyk@google.com" &&
-  g.getGuestStatus() == CalendarApp.GuestStatus.YES);
+  var pwujczykAccepted = event.getGuestList(true).some(g =>
+    g.getEmail() == "pwujczyk@google.com" &&
+    g.getGuestStatus() == CalendarApp.GuestStatus.YES);
 
   return pwujczykAccepted;
-//  var myStatus=event.getMyStatus();
-//  var mystatus=event.getMyStatus()== CalendarApp.GuestStatus.OWNER;
-//   if (event.getMyStatus()== CalendarApp.GuestStatus.OWNER)
-//   {
-//     return true
-//   }
+  //  var myStatus=event.getMyStatus();
+  //  var mystatus=event.getMyStatus()== CalendarApp.GuestStatus.OWNER;
+  //   if (event.getMyStatus()== CalendarApp.GuestStatus.OWNER)
+  //   {
+  //     return true
+  //   }
 
-//     if (event.getMyStatus()== CalendarApp.GuestStatus.YES)
-//   {
-//     return true
-//   }
+  //     if (event.getMyStatus()== CalendarApp.GuestStatus.YES)
+  //   {
+  //     return true
+  //   }
 
 
-//   var pwujczykAccepted = guestList.filter(function (guest) { return guest.getEmail() == 'pwujczyk@google.com' && guest.getGuestStatus() === CalendarApp.GuestStatus.YES; });
-//   if (pwujczykAccepted.length > 0) {
-//     return true;
-//   }
+  //   var pwujczykAccepted = guestList.filter(function (guest) { return guest.getEmail() == 'pwujczyk@google.com' && guest.getGuestStatus() === CalendarApp.GuestStatus.YES; });
+  //   if (pwujczykAccepted.length > 0) {
+  //     return true;
+  //   }
 
 
   //  for (var i = 0; i < guestList.length; i++) {
