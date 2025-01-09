@@ -5,6 +5,7 @@ var caledarIds = ['c_0f4cb3f8b97b7a808d0da14c2a98dee84e6612cef687984a70959059b1f
   , 'c_c836fe4957a38740ddbd08a2b537cee5f9b630b97e5862f01d99dff0719b4ee5@group.calendar.google.com'
   , 'c_833af64a3dc6013a751692a881ef3f8b8e39f27751fb2fc2acb00b416505e0b3@group.calendar.google.com'
   , 'c_9ad969d46441f6da4e92934b0a43a4c395c6724d74df8f4fee38f2427699b891@group.calendar.google.com'
+  , 'c_fd2e2e2a38f584641f3b838fbc32d70e450d665637ec63a13d0aac8393c4dbd6@group.calendar.google.com'
   , 'pwujczyk@google.com']
 
 function executeForToday() {
