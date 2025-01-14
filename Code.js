@@ -15,6 +15,16 @@ function executeForYesterday() {
   execute(-1)
 }
 
+Date.prototype.getWeekNumber = function(){
+  var d = new Date(Date.UTC(this.getFullYear(), this.getMonth(), this.getDate()));
+  var dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  var yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+  var weeknumber= Math.ceil((((d - yearStart) / 86400000) + 1)/7)
+  var yearAndWeek=this.getFullYear()*100+weeknumber
+  return yearAndWeek
+};
+
 
 function execute(daysOffsetStart) {
   //daysOffsetEnd = 0
@@ -45,8 +55,6 @@ function processCalendar(calendarId, start, end) {
   for (var e = 0; e < events.length; e++) {
     var event = events[e];
 
-
-
     var status = event.getMyStatus().toString();
     var type = event.getEventType().toString();
     var start = event.getStartTime();
@@ -60,7 +68,8 @@ function processCalendar(calendarId, start, end) {
     var duration = (end - start) / 3600000;
     var color = event.getColor();
     var day = Utilities.formatDate(start, 'Europe/Warsaw', 'yyyy-MM-dd');
-    var dayLog = { start: start, end: end, day: day, duration: duration, title: title, calendarName: calendarName, status: status, type: type, color: color }
+    var weeknumber=start.getWeekNumber()
+    var dayLog = { start: start, end: end, day: day, weeknumber: weeknumber, duration: duration,  title: title, calendarName: calendarName, status: status, type: type, color: color }
     //console.log(dayLog);
     var category = getCategory(dayLog)
     var dayLog = { ...dayLog, category: category }
@@ -183,7 +192,7 @@ function LoadConfiguration() {
 
 function SaveItem(dayLog) {
 
-  getSheet().appendRow([dayLog.start, dayLog.end, dayLog.day, dayLog.duration, dayLog.title, dayLog.calendarName, dayLog.status, dayLog.type, dayLog.color, dayLog.category]);
+  getSheet().appendRow([dayLog.start, dayLog.end, dayLog.day, dayLog.weeknumber, dayLog.duration,  dayLog.title, dayLog.calendarName, dayLog.status, dayLog.type, dayLog.color, dayLog.category]);
 }
 
 function getSheet() {
