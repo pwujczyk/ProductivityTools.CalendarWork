@@ -1,13 +1,3 @@
-
-
-var caledarIds = ['c_0f4cb3f8b97b7a808d0da14c2a98dee84e6612cef687984a70959059b1fa33b2@group.calendar.google.com'
-  , 'c_61629aa73c878650c1e66cefeefa354bb85696005a69c45fc7b3f2bf2f8130c3@group.calendar.google.com'
-  , 'c_c836fe4957a38740ddbd08a2b537cee5f9b630b97e5862f01d99dff0719b4ee5@group.calendar.google.com'
-  , 'c_833af64a3dc6013a751692a881ef3f8b8e39f27751fb2fc2acb00b416505e0b3@group.calendar.google.com'
-  , 'c_9ad969d46441f6da4e92934b0a43a4c395c6724d74df8f4fee38f2427699b891@group.calendar.google.com'
-  , 'c_fd2e2e2a38f584641f3b838fbc32d70e450d665637ec63a13d0aac8393c4dbd6@group.calendar.google.com'
-  , 'pwujczyk@google.com']
-
 function executeForToday() {
   execute(0)
 }
@@ -32,6 +22,28 @@ Date.prototype.getWeekNumber = function(){
   return yearAndWeek
 };
 
+// Cache for calendar configurations
+var _calendarsConfigCache = null; // Consider initializing at top of script execution if needed
+function GetCalendarsConfiguration() {
+  if (_calendarsConfigCache !== null) {
+    return _calendarsConfigCache;
+  }
+  var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  var sheet = spreadsheet.getSheetByName("Configuration-Calendars");
+  if (!sheet) {
+    console.error("Sheet 'Configuration-Calendars' not found.");
+    return []; // Return empty array or throw error
+  }
+  // Get data starting from row 2, column 1, for 1 column, and all available rows
+  var range = sheet.getRange(2, 1, sheet.getLastRow() - 1, 1); 
+  var values = range.getValues();
+  var calendarIds = values.map(function(row) {
+    return row[0];
+  }).filter(function(id) { return id && id.toString().trim() !== ''; }); // Filter out empty/null/blank ids
+  _calendarsConfigCache = calendarIds;
+  return calendarIds;
+}
+
 
 function execute(daysOffsetStart) {
   //daysOffsetEnd = 0
@@ -46,6 +58,7 @@ function execute(daysOffsetStart) {
   var start = START_DATE;
   var end = END_DATE;
   clearToday(start, end);
+  var caledarIds = GetCalendarsConfiguration();
   for (var e = 0; e < caledarIds.length; e++) {
     var calendarId = caledarIds[e];
     processCalendar(calendarId, start, end)
@@ -148,8 +161,67 @@ function ownerAccepted(event, calendarName, owner) {
   //   }
 }
 
+// Cache for DailyLog configuration
+var _dailyLogConfigCache = null;
+
+function LoadDailyLogConfiguration() {
+  if (_dailyLogConfigCache !== null) {
+    return _dailyLogConfigCache;
+  }
+
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  const sheetName = "Configuration-DailyLog";
+  const sheet = spreadsheet.getSheetByName(sheetName);
+
+  if (!sheet) {
+    console.error("Sheet '" + sheetName + "' not found.");
+    _dailyLogConfigCache = {}; // Cache empty object to avoid re-checking
+    return _dailyLogConfigCache;
+  }
+
+  const dataRange = sheet.getDataRange();
+  const values = dataRange.getValues();
+
+  if (values.length < 2) { // Need at least header + 1 data row
+    console.warn("Sheet '" + sheetName + "' has no data rows (or only a header). Ensure header 'key,category' exists and there is data.");
+    _dailyLogConfigCache = {};
+    return _dailyLogConfigCache;
+  }
+
+  values.shift(); // Remove header row (e.g., "key", "category")
+
+  const configMap = {};
+  values.forEach(function(row) {
+    if (row.length >= 2) {
+      const key = row[0] ? row[0].toString().trim() : "";
+      const category = row[1] ? row[1].toString().trim() : "";
+      if (key) { // Only add if key is not empty
+        configMap[key] = category;
+      }
+    }
+  });
+
+  _dailyLogConfigCache = configMap;
+  return _dailyLogConfigCache;
+}
+
+function GetDailyLogCategory(dayLog) {
+  const title = dayLog.title;
+  if (!title || title.indexOf(':') === -1) {
+    // console.log("GetDailyLogCategory: Title '" + title + "' does not contain ':' or is empty.");
+    return null; // No colon, so no key to extract
+  }
+  const key = title.substring(0, title.indexOf(':')).trim();
+  const dailyLogConfig = LoadDailyLogConfiguration();
+
+  return dailyLogConfig.hasOwnProperty(key) ? dailyLogConfig[key] : null;
+}
 
 function getCategory(dayLog) {
+  if (dayLog.calendarName === "DailyLog") {
+    return GetDailyLogCategory(dayLog);
+  }
+
   var configuration = LoadConfiguration();
   for (var e = 0; e < configuration.length; e++) {
     var conf = configuration[e];
@@ -179,11 +251,17 @@ function getCategory(dayLog) {
   }
 }
 
+// Cache for general configuration
+var _generalConfigCache = null;
 function LoadConfiguration() {
+  if (_generalConfigCache !== null) {
+    return _generalConfigCache;
+  }
   //var configuration = SpreadsheetApp.openById("1-qb1wmRiDWJTq5n5T3ItkWJmHjU-BhGYFe9e439MFtc");
   var configuration = SpreadsheetApp.getActiveSpreadsheet();
   //var vacations = configuration.getSheetByName("Vacations");
   var conf = configuration.getSheetByName("Configuration");
+  // TODO: Add check if conf sheet exists, similar to other config loaders
 
   var data = conf.getDataRange().getValues();
   data.shift();// Remove header 
@@ -193,6 +271,7 @@ function LoadConfiguration() {
     var element = { 'column': row[0], 'value': row[1], 'category': row[2] }
     items.push(element);
   });
+  _generalConfigCache = items;
   return items;
 }
 
