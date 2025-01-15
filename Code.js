@@ -15,6 +15,13 @@ function executeForYesterday() {
   execute(-1)
 }
 
+function executeForLast7Days() {
+    for (var e = 7; e >=0; e--) {
+      var day=0-e;
+      execute(day)
+    }
+}
+
 Date.prototype.getWeekNumber = function(){
   var d = new Date(Date.UTC(this.getFullYear(), this.getMonth(), this.getDate()));
   var dayNum = d.getUTCDay() || 7;
