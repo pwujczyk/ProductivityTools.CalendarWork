@@ -88,14 +88,8 @@ function processCalendar(calendarId, start, end) {
     var duration = (end - start) / 3600000;
     var color = event.getColor();
     var day = Utilities.formatDate(start, 'Europe/Warsaw', 'yyyy-MM-dd');
-<<<<<<< HEAD
-    var weeknumber = start.getWeekNumber()
-    var month = Utilities.formatDate(start, 'Europe/Warsaw', 'yyyy-MM');
-    var dayLog = { start: start, end: end, day: day, weeknumber: weeknumber, month: month, duration: duration, title: title, calendarName: calendarName, status: status, type: type, color: color }
-=======
     var weeknumber=start.getWeekNumber()
     var dayLog = { start: start, end: end, day: day, weeknumber: weeknumber, duration: duration,  title: title, calendarName: calendarName, status: status, type: type, color: color }
->>>>>>> ed04a7a12f594baafe624b5389fe4d053c5a1219
     //console.log(dayLog);
     var category = getCategory(dayLog)
     var dayLog = { ...dayLog, category: category }
