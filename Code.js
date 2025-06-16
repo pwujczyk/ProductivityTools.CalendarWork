@@ -6,19 +6,26 @@ function executeForYesterday() {
 }
 
 function executeForLast7Days() {
-    for (var e = 7; e >=0; e--) {
-      var day=0-e;
-      execute(day)
-    }
+  for (var e = 7; e >= 0; e--) {
+    var day = 0 - e;
+    execute(day)
+  }
 }
 
-Date.prototype.getWeekNumber = function(){
+function executeForLast100Days() {
+  for (var e = 100; e >= 0; e--) {
+    var day = 0 - e;
+    execute(day)
+  }
+}
+
+Date.prototype.getWeekNumber = function () {
   var d = new Date(Date.UTC(this.getFullYear(), this.getMonth(), this.getDate()));
   var dayNum = d.getUTCDay() || 7;
   d.setUTCDate(d.getUTCDate() + 4 - dayNum);
-  var yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
-  var weeknumber= Math.ceil((((d - yearStart) / 86400000) + 1)/7)
-  var yearAndWeek=this.getFullYear()*100+weeknumber
+  var yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  var weeknumber = Math.ceil((((d - yearStart) / 86400000) + 1) / 7)
+  var yearAndWeek = this.getFullYear() * 100 + weeknumber
   return yearAndWeek
 };
 
@@ -35,11 +42,11 @@ function GetCalendarsConfiguration() {
     return []; // Return empty array or throw error
   }
   // Get data starting from row 2, column 1, for 1 column, and all available rows
-  var range = sheet.getRange(2, 1, sheet.getLastRow() - 1, 1); 
+  var range = sheet.getRange(2, 1, sheet.getLastRow() - 1, 1);
   var values = range.getValues();
-  var calendarIds = values.map(function(row) {
+  var calendarIds = values.map(function (row) {
     return row[0];
-  }).filter(function(id) { return id && id.toString().trim() !== ''; }); // Filter out empty/null/blank ids
+  }).filter(function (id) { return id && id.toString().trim() !== ''; }); // Filter out empty/null/blank ids
   _calendarsConfigCache = calendarIds;
   return calendarIds;
 }
@@ -88,11 +95,13 @@ function processCalendar(calendarId, start, end) {
     var duration = (end - start) / 3600000;
     var color = event.getColor();
     var day = Utilities.formatDate(start, 'Europe/Warsaw', 'yyyy-MM-dd');
-    var weeknumber=start.getWeekNumber()
-    var dayLog = { start: start, end: end, day: day, weeknumber: weeknumber, duration: duration,  title: title, calendarName: calendarName, status: status, type: type, color: color }
+    var weeknumber = start.getWeekNumber()
+    var month = Utilities.formatDate(start, 'Europe/Warsaw', 'yyyy-MM');
+    var dayLog = { start: start, end: end, day: day, weeknumber: weeknumber, month: month, duration: duration, title: title, calendarName: calendarName, status: status, type: type, color: color }
     //console.log(dayLog);
     var category = getCategory(dayLog)
-    var dayLog = { ...dayLog, category: category }
+    var value = getValue(dayLog)
+    var dayLog = { ...dayLog, category: category, value: value }
 
     //collor=1 - do not count
     var ownerAcceptedValue = ownerAccepted(event, calendarName, 'pwujczyk@google.com')
@@ -170,7 +179,7 @@ function LoadDailyLogConfiguration() {
   }
 
   const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
-  const sheetName = "Configuration-DailyLog";
+  const sheetName = "Mapping-DailyLog";
   const sheet = spreadsheet.getSheetByName(sheetName);
 
   if (!sheet) {
@@ -191,7 +200,7 @@ function LoadDailyLogConfiguration() {
   values.shift(); // Remove header row (e.g., "key", "category")
 
   const configMap = {};
-  values.forEach(function(row) {
+  values.forEach(function (row) {
     if (row.length >= 2) {
       const key = row[0] ? row[0].toString().trim() : "";
       const category = row[1] ? row[1].toString().trim() : "";
@@ -207,21 +216,21 @@ function LoadDailyLogConfiguration() {
 
 function GetDailyLogCategory(dayLog) {
   const title = dayLog.title;
-  if (!title || title.indexOf(':') === -1) {
-    // console.log("GetDailyLogCategory: Title '" + title + "' does not contain ':' or is empty.");
-    return null; // No colon, so no key to extract
-  }
-  const key = title.substring(0, title.indexOf(':')).trim();
   const dailyLogConfig = LoadDailyLogConfiguration();
+  if (title) {
+    if (title.indexOf(':') === -1) {
+      var r = dailyLogConfig.hasOwnProperty(title) ? dailyLogConfig[title] : null;
+      return r;
+    }
+    const key = title.substring(0, title.indexOf(':')).trim();
 
-  return dailyLogConfig.hasOwnProperty(key) ? dailyLogConfig[key] : null;
+    let result = dailyLogConfig.hasOwnProperty(key) ? dailyLogConfig[key] : null;
+    return result;
+  }
+  return null;
 }
 
-function getCategory(dayLog) {
-  if (dayLog.calendarName === "DailyLog") {
-    return GetDailyLogCategory(dayLog);
-  }
-
+function GetCaldendarsCategory(dayLog) {
   var configuration = LoadConfiguration();
   for (var e = 0; e < configuration.length; e++) {
     var conf = configuration[e];
@@ -232,6 +241,7 @@ function getCategory(dayLog) {
       }
     }
 
+
     if (conf.column == "Color") {
       if (dayLog.color == conf.value) {
         var returnValue = conf.category
@@ -239,12 +249,61 @@ function getCategory(dayLog) {
       }
     }
 
+
     if (conf.column == "CalendarName") {
       if (dayLog.calendarName == conf.value) {
         var returnValue = conf.category
         return returnValue;
       }
     }
+  }
+}
+
+function GetDailyLogValue(dayLog) {
+  const title = dayLog.title;
+  if (!title || title.indexOf(':') === -1) {
+    // console.log("GetDailyLogCategory: Title '" + title + "' does not contain ':' or is empty.");
+    return null; // No colon, so no key to extract
+  }
+  const parts = title.split(':');
+
+  // If there are at least two parts (i.e., a delimiter was found and there's content after it)
+  if (parts.length > 1) {
+    // Return the second part (index 1)
+    var r = parts[1];
+    return r;
+  } else {
+    // If no delimiter or no content after the delimiter, return null
+    console.warn(`No second part found for string: "${inputString}".`);
+    return null;
+  }
+}
+
+function GetCalendarValue(dayLog) {
+
+}
+
+
+function getValue(dayLog) {
+  if (dayLog.calendarName === "DailyLog" || dayLog.calendarName === "DataPoints") {
+    var r = GetDailyLogValue(dayLog);
+    return r;
+  }
+  else {
+    var r = GetCalendarValue(dayLog);
+    return r;
+
+  }
+}
+
+function getCategory(dayLog) {
+  if (dayLog.calendarName === "DailyLog" || dayLog.calendarName === "DataPoints") {
+    var r = GetDailyLogCategory(dayLog);
+    return r;
+  }
+  else {
+    var r = GetCaldendarsCategory(dayLog);
+    return r;
 
   }
 }
@@ -258,7 +317,7 @@ function LoadConfiguration() {
   //var configuration = SpreadsheetApp.openById("1-qb1wmRiDWJTq5n5T3ItkWJmHjU-BhGYFe9e439MFtc");
   var configuration = SpreadsheetApp.getActiveSpreadsheet();
   //var vacations = configuration.getSheetByName("Vacations");
-  var conf = configuration.getSheetByName("Configuration");
+  var conf = configuration.getSheetByName("Mapping-Caldendars");
   // TODO: Add check if conf sheet exists, similar to other config loaders
 
   var data = conf.getDataRange().getValues();
@@ -289,9 +348,11 @@ function clearToday(start, end) {
   var sheet = getSheet()
   var data = sheet.getDataRange().getValues();
   for (i = data.length - 1; i > 0; i--) {
+    var x = i;
+    var x1 = data[i];
     var lineStart = data[i][0]
     var lineEnd = data[i][1]
-    if (start < lineStart && lineStart < end) {
+    if (start <= lineStart && lineStart <= end) {
       console.log(start);
       sheet.deleteRow(i + 1)
     }
