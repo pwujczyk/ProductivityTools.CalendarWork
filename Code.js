@@ -96,7 +96,8 @@ function processCalendar(calendarId, start, end) {
     var color = event.getColor();
     var day = Utilities.formatDate(start, 'Europe/Warsaw', 'yyyy-MM-dd');
     var weeknumber = start.getWeekNumber()
-    var dayLog = { start: start, end: end, day: day, weeknumber: weeknumber, duration: duration, title: title, calendarName: calendarName, status: status, type: type, color: color }
+    var month = Utilities.formatDate(start, 'Europe/Warsaw', 'yyyy-MM');
+    var dayLog = { start: start, end: end, day: day, weeknumber: weeknumber, month: month, duration: duration, title: title, calendarName: calendarName, status: status, type: type, color: color }
     //console.log(dayLog);
     var category = getCategory(dayLog)
     var value = getValue(dayLog)
@@ -334,7 +335,7 @@ function LoadConfiguration() {
 
 function SaveItem(dayLog) {
 
-  getSheet().appendRow([dayLog.start, dayLog.end, dayLog.day, dayLog.weeknumber, dayLog.duration, dayLog.title, dayLog.calendarName, dayLog.status, dayLog.type, dayLog.color, dayLog.category, dayLog.value]);
+  getSheet().appendRow([dayLog.start, dayLog.end, dayLog.day, dayLog.weeknumber, dayLog.month, dayLog.duration, dayLog.title, dayLog.calendarName, dayLog.status, dayLog.type, dayLog.color, dayLog.category, dayLog.value]);
 }
 
 function getSheet() {
