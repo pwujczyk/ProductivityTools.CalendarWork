@@ -42,7 +42,6 @@ function processCalendar(calendarId, start, end) {
   var entries = {};
   for (var e = 0; e < events.length; e++) {
     var event = events[e];
-    ConvertCalendar(event);
     var status = event.getMyStatus().toString();
     var type = event.getEventType().toString();
     var start = event.getStartTime();

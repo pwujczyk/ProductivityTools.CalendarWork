@@ -25,6 +25,20 @@ function executeConversionForToday() {
   execute(0,ConvertCalendar)
 }
 
+function executeConversionForLast7Days() {
+    for (var e = 7; e >= 0; e--) {
+    var day = 0 - e;
+    execute(day,ConvertCalendar)
+  }
+}
+
+function executeConversionForLast100Days() {
+    for (var e = 100; e >= 0; e--) {
+    var day = 0 - e;
+    execute(day,ConvertCalendar)
+  }
+}
+
 
 //common
 function execute(daysOffsetStart, fn) {
@@ -39,7 +53,7 @@ function execute(daysOffsetStart, fn) {
 
   var start = START_DATE;
   var end = END_DATE;
-  clearToday(start, end);
+  
   var caledarIds = GetCalendarsConfiguration();
   for (var e = 0; e < caledarIds.length; e++) {
     var calendarId = caledarIds[e];

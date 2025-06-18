@@ -243,6 +243,7 @@ function ConvertCalendar(event) {
 }
 
 function processCalendar(calendarId, start, end) {
+  clearToday(start, end);
   console.log("Hello")
   var calendar = CalendarApp.getCalendarById(calendarId);
   var calendarName = calendar.getName();
@@ -251,7 +252,6 @@ function processCalendar(calendarId, start, end) {
   var entries = {};
   for (var e = 0; e < events.length; e++) {
     var event = events[e];
-    ConvertCalendar(event);
     var status = event.getMyStatus().toString();
     var type = event.getEventType().toString();
     var start = event.getStartTime();
@@ -270,6 +270,11 @@ function processCalendar(calendarId, start, end) {
     var dayLog = { start: start, end: end, day: day, weeknumber: weeknumber, month: month, duration: duration, title: title, calendarName: calendarName, status: status, type: type, color: color }
     //console.log(dayLog);
     var category = getCategory(dayLog)
+
+      if (dayLog.calendarName === "DailyLog" || dayLog.calendarName === "DataPoints") {
+        ReplaceTitleWithCategory(event,category)
+    }
+
     var value = getValue(dayLog)
     var dayLog = { ...dayLog, category: category, value: value }
 
@@ -384,6 +389,31 @@ function LoadDailyLogConfiguration() {
   return _dailyLogConfigCache;
 }
 
+function ReplaceTitleWithCategory(event, category) {
+  if (!category) {
+    return; // Don't do anything if no category was found.
+  }
+
+  const originalTitle = event.getTitle();
+  const colonIndex = originalTitle.indexOf(':');
+
+  let newTitle;
+  if (colonIndex === -1) {
+    // No colon, replace the whole title with the category.
+    newTitle = category;
+  } else {
+    // Colon found, replace the part before it.
+    const valuePart = originalTitle.substring(colonIndex); // e.g., ": 1 hour"
+    newTitle = category + valuePart;
+  }
+
+  if (originalTitle !== newTitle) {
+    event.setTitle(newTitle);
+    console.log("Updated event title from '" + originalTitle + "' to '" + newTitle + "'.");
+  }
+}
+
+
 function GetDailyLogCategory(dayLog) {
   const title = dayLog.title;
   const dailyLogConfig = LoadDailyLogConfiguration();
@@ -440,7 +470,7 @@ function GetDailyLogValue(dayLog) {
   // If there are at least two parts (i.e., a delimiter was found and there's content after it)
   if (parts.length > 1) {
     // Return the second part (index 1)
-    var r = parts[1];
+    var r = parts[1].trim();
     return r;
   } else {
     // If no delimiter or no content after the delimiter, return null
