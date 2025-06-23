@@ -53,7 +53,7 @@ function execute(daysOffsetStart, fn) {
 
   var start = START_DATE;
   var end = END_DATE;
-  
+  clearToday(start, end);
   var caledarIds = GetCalendarsConfiguration();
   for (var e = 0; e < caledarIds.length; e++) {
     var calendarId = caledarIds[e];

@@ -243,7 +243,6 @@ function ConvertCalendar(event) {
 }
 
 function processCalendar(calendarId, start, end) {
-  clearToday(start, end);
   console.log("Hello")
   var calendar = CalendarApp.getCalendarById(calendarId);
   var calendarName = calendar.getName();
