@@ -1,64 +1,72 @@
 function executeAnalysisForToday() {
-  execute(0,processCalendar)
+  executeAnalysis(0)
 }
 
 function executeAnalysisForYesterday() {
-  execute(-1,processCalendar)
+  executeAnalysis(-1)
 }
 
 function executeAnalysisForLast7Days() {
   for (var e = 7; e >= 0; e--) {
     var day = 0 - e;
-    execute(day,processCalendar)
+    executeAnalysis(day)
   }
 }
 
 function executeAnalysisForLast100Days() {
   for (var e = 100; e >= 0; e--) {
     var day = 0 - e;
-    execute(day,processCalendar)
+    executeAnalysis(day)
   }
 }
 
 
 function executeConversionForToday() {
-  execute(0,ConvertCalendar)
+  executeConversion(0)
 }
 
 function executeConversionForLast7Days() {
     for (var e = 7; e >= 0; e--) {
     var day = 0 - e;
-    execute(day,ConvertCalendar)
+    executeConversion(day)
   }
 }
 
 function executeConversionForLast100Days() {
     for (var e = 100; e >= 0; e--) {
     var day = 0 - e;
-    execute(day,ConvertCalendar)
+    executeConversion(day)
   }
 }
 
 
+function getDateRangeForOffset(daysOffsetStart) {
+  const MINUTE_IN_MS = 60 * 1000;
+  const DAY_IN_MS = 24 * 60 * MINUTE_IN_MS;
+  const now = new Date();
+  now.setHours(0, 0, 0, 0); // Set to the beginning of today
+  const startDate = new Date(now.getTime() + (daysOffsetStart * DAY_IN_MS));
+  const endDate = new Date(now.getTime() + ((1 + daysOffsetStart) * DAY_IN_MS) - MINUTE_IN_MS);
+  return { start: startDate, end: endDate };
+}
+
 //common
-function execute(daysOffsetStart, fn) {
-  //daysOffsetEnd = 0
-  var MINUTE = 60 * 1000;
-  var DAY = 24 * 60 * MINUTE;  // ms
-  var NOW = new Date();
-  NOW.setHours(0, 0, 0, 0);
-  var START_DATE = new Date(NOW.getTime() + (daysOffsetStart) * DAY);
-  var END_DATE = new Date(NOW.getTime() + (1 + daysOffsetStart) * DAY - MINUTE);
-
-
-  var start = START_DATE;
-  var end = END_DATE;
+function executeAnalysis(daysOffsetStart) {
+  const { start, end } = getDateRangeForOffset(daysOffsetStart);
   clearToday(start, end);
-  var caledarIds = GetCalendarsConfiguration();
-  for (var e = 0; e < caledarIds.length; e++) {
+  const caledarIds = GetCalendarsConfiguration();
+  for (let e = 0; e < caledarIds.length; e++) {
     var calendarId = caledarIds[e];
     fn(calendarId, start, end)
-    //processCalendar(calendarId, start, end)
+  }
+}
+
+function executeConversion(daysOffsetStart) {
+  const { start, end } = getDateRangeForOffset(daysOffsetStart);
+  const caledarIds = GetCalendarsConfiguration();
+  for (let e = 0; e < caledarIds.length; e++) {
+    var calendarId = caledarIds[e];
+    fn(calendarId, start, end)
   }
 }
 
@@ -82,4 +90,3 @@ function GetCalendarsConfiguration() {
   _calendarsConfigCache = calendarIds;
   return calendarIds;
 }
-
