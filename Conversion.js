@@ -66,7 +66,7 @@ function LoadConvertCalendarConfiguration() {
  */
 
 
-function ConvertCalendar(calendarId, start, end) {
+function processConversion(calendarId, start, end) {
   console.log("Hello starting convert calendar for calendarid:", calendarId)
   var calendar = CalendarApp.getCalendarById(calendarId);
   var calendarName = calendar.getName();

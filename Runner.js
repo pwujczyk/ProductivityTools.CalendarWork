@@ -57,7 +57,7 @@ function executeAnalysis(daysOffsetStart) {
   const caledarIds = GetCalendarsConfiguration();
   for (let e = 0; e < caledarIds.length; e++) {
     var calendarId = caledarIds[e];
-    fn(calendarId, start, end)
+    processAnalisys(calendarId, start, end)
   }
 }
 
@@ -66,7 +66,7 @@ function executeConversion(daysOffsetStart) {
   const caledarIds = GetCalendarsConfiguration();
   for (let e = 0; e < caledarIds.length; e++) {
     var calendarId = caledarIds[e];
-    fn(calendarId, start, end)
+    processConversion(calendarId, start, end)
   }
 }
 
