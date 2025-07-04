@@ -37,7 +37,7 @@ function LoadConvertCalendarConfiguration() {
   const configMap = {};
   values.forEach(function (row, index) {
     if (row.length >= 2) {
-      const key = row[0] ? row[0].toString().trim() : "";
+      const key = row[0] ? row[0].toString().trim().toLowerCase() : "";
       const targetCalendarId = row[1] ? row[1].toString().trim() : "";
       if (key && targetCalendarId) {
         if (configMap.hasOwnProperty(key)) {

@@ -10,28 +10,6 @@ Date.prototype.getWeekNumber = function () {
   return yearAndWeek
 };
 
-// Cache for calendar configurations
-
-// function executeAnalysis(daysOffsetStart) {
-//   //daysOffsetEnd = 0
-//   var MINUTE = 60 * 1000;
-//   var DAY = 24 * 60 * MINUTE;  // ms
-//   var NOW = new Date();
-//   NOW.setHours(0, 0, 0, 0);
-//   var START_DATE = new Date(NOW.getTime() + (daysOffsetStart) * DAY);
-//   var END_DATE = new Date(NOW.getTime() + (1 + daysOffsetStart) * DAY - MINUTE);
-
-
-//   var start = START_DATE;
-//   var end = END_DATE;
-//   clearToday(start, end);
-//   var caledarIds = GetCalendarsConfiguration();
-//   for (var e = 0; e < caledarIds.length; e++) {
-//     var calendarId = caledarIds[e];
-//     processCalendar(calendarId, start, end)
-//   }
-// }
-
 
 function processAnalisys(calendarId, start, end) {
   console.log("Hello")
@@ -59,7 +37,11 @@ function processAnalisys(calendarId, start, end) {
     var month = Utilities.formatDate(start, 'Europe/Warsaw', 'yyyy-MM');
     var dayLog = { start: start, end: end, day: day, weeknumber: weeknumber, month: month, duration: duration, title: title, calendarName: calendarName, status: status, type: type, color: color }
     //console.log(dayLog);
+
     var category = getCategory(dayLog)
+    if (dayLog.calendarName === "DailyLog" || dayLog.calendarName === "DataPoints") {
+      ReplaceTitleWithCategory(event, category)
+    }
     var value = getValue(dayLog)
     var dayLog = { ...dayLog, category: category, value: value }
 
@@ -79,6 +61,30 @@ function processAnalisys(calendarId, start, end) {
 
   }
   return entries;
+}
+
+function ReplaceTitleWithCategory(event, category) {
+  if (!category) {
+    return; // Don't do anything if no category was found.
+  }
+
+  const originalTitle = event.getTitle();
+  const colonIndex = originalTitle.indexOf(':');
+
+  let newTitle;
+  if (colonIndex === -1) {
+    // No colon, replace the whole title with the category.
+    newTitle = category;
+  } else {
+    // Colon found, replace the part before it.
+    const valuePart = originalTitle.substring(colonIndex); // e.g., ": 1 hour"
+    newTitle = category + valuePart;
+  }
+
+  if (originalTitle !== newTitle) {
+    event.setTitle(newTitle);
+    console.log("Updated event title from '" + originalTitle + "' to '" + newTitle + "'.");
+  }
 }
 
 function ownerAccepted(event, calendarName, owner) {
@@ -179,12 +185,12 @@ function GetDailyLogCategory(dayLog) {
   const dailyLogConfig = LoadDailyLogConfiguration();
   if (title) {
     if (title.indexOf(':') === -1) {
-      var r = dailyLogConfig.hasOwnProperty(title) ? dailyLogConfig[title] : null;
+      var r = dailyLogConfig.hasOwnProperty(title) ? dailyLogConfig[title.toLowerCase()] : null;
       return r;
     }
     const key = title.substring(0, title.indexOf(':')).trim();
 
-    let result = dailyLogConfig.hasOwnProperty(key) ? dailyLogConfig[key] : null;
+    let result = dailyLogConfig.hasOwnProperty(key) ? dailyLogConfig[key.toLowerCase()] : null;
     return result;
   }
   return null;
