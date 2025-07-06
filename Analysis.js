@@ -167,8 +167,8 @@ function LoadDailyLogConfiguration() {
 
   const configMap = {};
   values.forEach(function (row) {
-    if (row.length >= 2) {
-      const key = row[0] ? row[0].toString().trim() : "";
+    if (row.length >= 2 ) {
+      const key = row[0] ? row[0].toString().trim().toLowerCase() : "";
       const category = row[1] ? row[1].toString().trim() : "";
       if (key) { // Only add if key is not empty
         configMap[key] = category;
@@ -181,16 +181,16 @@ function LoadDailyLogConfiguration() {
 }
 
 function GetDailyLogCategory(dayLog) {
-  const title = dayLog.title;
+  const title = dayLog.title.toLowerCase();
   const dailyLogConfig = LoadDailyLogConfiguration();
   if (title) {
     if (title.indexOf(':') === -1) {
-      var r = dailyLogConfig.hasOwnProperty(title) ? dailyLogConfig[title.toLowerCase()] : null;
+      var r = dailyLogConfig.hasOwnProperty(title) ? dailyLogConfig[title] : null;
       return r;
     }
     const key = title.substring(0, title.indexOf(':')).trim();
 
-    let result = dailyLogConfig.hasOwnProperty(key) ? dailyLogConfig[key.toLowerCase()] : null;
+    let result = dailyLogConfig.hasOwnProperty(key) ? dailyLogConfig[key] : null;
     return result;
   }
   return null;
@@ -236,7 +236,7 @@ function GetDailyLogValue(dayLog) {
   // If there are at least two parts (i.e., a delimiter was found and there's content after it)
   if (parts.length > 1) {
     // Return the second part (index 1)
-    var r = parts[1];
+    var r = parts[1].trim();
     return r;
   } else {
     // If no delimiter or no content after the delimiter, return null

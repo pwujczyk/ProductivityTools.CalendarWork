@@ -1,5 +1,5 @@
 function executeAnalysisForToday() {
-  executeAnalysis(0)
+  executeAnalysis(-5)
 }
 
 function executeAnalysisForYesterday() {

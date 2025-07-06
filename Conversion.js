@@ -95,7 +95,7 @@ function ConvertCalendarEvent(event) {
     key = titleContentAfterHash;
     newEventTitle = key; // Use the key itself as the new title
   } else { // e.g., "#ProjectX Meeting"
-    key = titleContentAfterHash.substring(0, firstSpaceIndex);
+    key = titleContentAfterHash.substring(0, firstSpaceIndex).toLowerCase();
     const restOfTitle = titleContentAfterHash.substring(firstSpaceIndex + 1).trim();
     newEventTitle = restOfTitle === "" ? key : restOfTitle; // If "#Key ", title becomes "Key"
   }
