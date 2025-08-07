@@ -1,5 +1,5 @@
 function executeAnalysisForToday() {
-  executeAnalysis(-5)
+  executeAnalysis(0)
 }
 
 function executeAnalysisForYesterday() {
@@ -13,8 +13,15 @@ function executeAnalysisForLast7Days() {
   }
 }
 
-function executeAnalysisForLast100Days() {
-  for (var e = 100; e >= 0; e--) {
+function executeAnalysisForLast50Days() {
+  for (var e = 50; e >= 0; e--) {
+    var day = 0 - e;
+    executeAnalysis(day)
+  }
+}
+
+function executeAnalysisForLastXDays() {
+  for (var e = 320; e >= 200; e--) {
     var day = 0 - e;
     executeAnalysis(day)
   }

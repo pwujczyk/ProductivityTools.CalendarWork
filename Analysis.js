@@ -12,7 +12,7 @@ Date.prototype.getWeekNumber = function () {
 
 
 function processAnalisys(calendarId, start, end) {
-  console.log("Hello")
+  console.log("Hello", start, end)
   var calendar = CalendarApp.getCalendarById(calendarId);
   var calendarName = calendar.getName();
   var events = calendar.getEvents(start, end);
