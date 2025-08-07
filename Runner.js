@@ -21,7 +21,7 @@ function executeAnalysisForLast50Days() {
 }
 
 function executeAnalysisForLastXDays() {
-  for (var e = 320; e >= 200; e--) {
+  for (var e = 50; e >= 0; e--) {
     var day = 0 - e;
     executeAnalysis(day)
   }
@@ -48,12 +48,16 @@ function executeConversionForLast100Days() {
 
 
 function getDateRangeForOffset(daysOffsetStart) {
-  const MINUTE_IN_MS = 60 * 1000;
-  const DAY_IN_MS = 24 * 60 * MINUTE_IN_MS;
   const now = new Date();
-  now.setHours(0, 0, 0, 0); // Set to the beginning of today
-  const startDate = new Date(now.getTime() + (daysOffsetStart * DAY_IN_MS));
-  const endDate = new Date(now.getTime() + ((1 + daysOffsetStart) * DAY_IN_MS) - MINUTE_IN_MS);
+  now.setHours(0, 0, 0, 0); // Ustawia na początek dzisiejszego dnia
+
+  // Używamy setDate, która jest odporna na zmiany czasu
+  const startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  startDate.setDate(startDate.getDate() + daysOffsetStart);
+
+  const endDate = new Date(startDate.getFullYear(), startDate.getMonth(), startDate.getDate() + 1);
+  endDate.setMinutes(endDate.getMinutes() - 1); // Odjęcie jednej minuty, aby dostać koniec dnia
+
   return { start: startDate, end: endDate };
 }
 

@@ -11,11 +11,11 @@ Date.prototype.getWeekNumber = function () {
 };
 
 
-function processAnalisys(calendarId, start, end) {
-  console.log("Hello", start, end)
+function processAnalisys(calendarId, rangeStart, rangeEnd) {
+  console.log("Hello", rangeStart, rangeEnd)
   var calendar = CalendarApp.getCalendarById(calendarId);
   var calendarName = calendar.getName();
-  var events = calendar.getEvents(start, end);
+  var events = calendar.getEvents(rangeStart, rangeEnd);
 
   var entries = {};
   for (var e = 0; e < events.length; e++) {
