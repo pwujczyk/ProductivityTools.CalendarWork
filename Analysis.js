@@ -20,10 +20,14 @@ function processAnalisys(calendarId, rangeStart, rangeEnd) {
   var entries = {};
   for (var e = 0; e < events.length; e++) {
     var event = events[e];
-    var status = event.getMyStatus().toString();
+    var status = event.getMyStatus()?.toString();
     var type = event.getEventType().toString();
     var start = event.getStartTime();
     var end = event.getEndTime();
+
+    if (start < rangeStart || start > rangeEnd) {
+      continue;
+    }
 
     var title = event.getTitle();
     console.log(title);
