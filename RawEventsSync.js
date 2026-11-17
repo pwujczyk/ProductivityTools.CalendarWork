@@ -2,11 +2,11 @@
 // Existing scripts (Runner.js, Analysis.js, Conversion.js, Menu.js) are untouched.
 // Uses Google Calendar API v3 Advanced Service (enabled in appsscript.json).
 // No parsing, mapping, rule logic, or filtering happens here:
+// - Server decides active calendars and startDate/endDate via GET /api/sync/plan.
 // - Raw Google Calendar v3 items are POSTed directly to the API.
 // - Server-computed mutation commands (MOVE / RENAME) are executed blindly via Calendar API v3.
 
 const RAW_SYNC_API_URL = "https://calendarlog-api.productivitytools.top";
-const RAW_SYNC_MAX_EVENTS = 1;
 
 /**
  * Main entry point (for time-driven triggers or manual runs):
@@ -32,11 +32,7 @@ function syncRawCalendarEvents() {
     };
   }
 
-  var maxEvents = (typeof plan.maxEvents === "number" && plan.maxEvents > 0)
-    ? plan.maxEvents
-    : RAW_SYNC_MAX_EVENTS;
-
-  return rawSyncExecuteCalendarPlans_(account, calendars, maxEvents);
+  return rawSyncExecuteCalendarPlans_(account, calendars);
 }
 
 /**
@@ -65,11 +61,7 @@ function syncRawCalendarEventsForRange(startDateStr, endDateStr) {
     };
   }
 
-  var maxEvents = (typeof plan.maxEvents === "number" && plan.maxEvents > 0)
-    ? plan.maxEvents
-    : RAW_SYNC_MAX_EVENTS;
-
-  return rawSyncExecuteCalendarPlans_(account, calendars, maxEvents);
+  return rawSyncExecuteCalendarPlans_(account, calendars);
 }
 
 /**
@@ -114,7 +106,7 @@ function rawSyncFetchPlan_(account) {
   return plan;
 }
 
-function rawSyncExecuteCalendarPlans_(account, calendars, maxEvents) {
+function rawSyncExecuteCalendarPlans_(account, calendars) {
   var tz = Session.getScriptTimeZone();
   var calendarsById = {};
   for (var i = 0; i < calendars.length; i++) {
@@ -122,7 +114,7 @@ function rawSyncExecuteCalendarPlans_(account, calendars, maxEvents) {
   }
 
   var pendingMutations = [];
-  var pass1 = rawSyncSyncCalendarsOnce_(account, calendars, tz, pendingMutations, maxEvents);
+  var pass1 = rawSyncSyncCalendarsOnce_(account, calendars, tz, pendingMutations);
 
   var mutationsApplied = 0;
   var mutationsFailed = 0;
@@ -142,7 +134,7 @@ function rawSyncExecuteCalendarPlans_(account, calendars, maxEvents) {
 
     if (resyncCalendars.length > 0) {
       // Single follow-up pass (mutations ignored) so SQL immediately reflects moved/renamed events.
-      var pass2 = rawSyncSyncCalendarsOnce_(account, resyncCalendars, tz, null, maxEvents);
+      var pass2 = rawSyncSyncCalendarsOnce_(account, resyncCalendars, tz, null);
       calendarsResynced = pass2.synced;
       pass1.failed += pass2.failed;
       pass1.totalEventsSent += pass2.totalEventsSent;
@@ -162,23 +154,18 @@ function rawSyncExecuteCalendarPlans_(account, calendars, maxEvents) {
   return summary;
 }
 
-function rawSyncSyncCalendarsOnce_(account, calendars, tz, collectMutations, maxEvents) {
+function rawSyncSyncCalendarsOnce_(account, calendars, tz, collectMutations) {
   var synced = 0;
   var failed = 0;
   var totalEventsSent = 0;
 
   for (var i = 0; i < calendars.length; i++) {
-    if (maxEvents && maxEvents > 0 && totalEventsSent >= maxEvents) {
-      break;
-    }
-
     var cal = calendars[i];
     var range = rawSyncFormatRange_(cal.startDate, cal.endDate, tz);
-    var remaining = (maxEvents && maxEvents > 0) ? (maxEvents - totalEventsSent) : 0;
 
     try {
       var calendarName = rawSyncGetCalendarName_(cal.calendarId);
-      var events = rawSyncFetchEvents_(cal.calendarId, range.startIso, range.endIso, remaining);
+      var events = rawSyncFetchEvents_(cal.calendarId, range.startIso, range.endIso);
 
       var result = rawSyncPostBatch_({
         account: account,
@@ -325,26 +312,21 @@ function rawSyncGetCalendarName_(calendarId) {
   return (meta && meta.summary) ? meta.summary : calendarId;
 }
 
-function rawSyncFetchEvents_(calendarId, timeMin, timeMax, maxEvents) {
+function rawSyncFetchEvents_(calendarId, timeMin, timeMax) {
   var items = [];
   var pageToken = null;
-  var pageSize = (maxEvents && maxEvents > 0) ? Math.min(maxEvents, 2500) : 2500;
 
   do {
     var response = Calendar.Events.list(calendarId, {
       timeMin: timeMin,
       timeMax: timeMax,
       singleEvents: true,
-      orderBy: "startTime",
-      maxResults: pageSize,
+      maxResults: 2500,
       pageToken: pageToken
     });
 
     if (response.items && response.items.length > 0) {
       items = items.concat(response.items);
-    }
-    if (maxEvents && maxEvents > 0 && items.length >= maxEvents) {
-      return items.slice(0, maxEvents);
     }
     pageToken = response.nextPageToken;
   } while (pageToken);
