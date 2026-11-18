@@ -14,8 +14,8 @@
 const CONSOLIDATE_CONFIG = {
   // Zakres dat (włącznie), z którego wydarzenia mają zostać przeniesione.
   // Dla samego czerwca 2025 możesz ustawić: startDate: "2025-06-01", endDate: "2025-06-30".
-  startDate: "2025-01-13",
-  endDate: "2025-01-18",
+  startDate: "2024-04-15",
+  endDate: "2025-06-16",
 
   // Domyślny kalendarz docelowy (nazwa kalendarza z Google Calendar LUB jego pełne CalendarId).
   defaultTargetCalendar: "DailyLog",
@@ -43,19 +43,43 @@ const CONSOLIDATE_CONFIG = {
       sourceCalendar: "TopDown",
       titlePrefix: "TopDown"
     },
+    {
+      sourceCalendar: "FocusedWork",
+      titlePrefix: "IPW"
+    },
 
     // Reguła mapowania po tytule wydarzenia (subject):
-    // Wpisz w sourceCalendar nazwę lub ID tego dodatkowego kalendarza.
-    // Użyj subject: "*" jako reguły domyślnej (fallback) dla wszystkich pozostałych tytułów,
-    // a znacznik {title} w newTitle zostanie zastąpiony dotychczasowym tytułem wydarzenia.
+    // Domyślnie wszystko z tego kalendarza trafia do targetCalendar ("DailyLog").
+    // Reguła { subject: "*", ... } przechwytuje wszystkie pozostałe tytuły i w miejsce {title} wstawia dotychczasowy tytuł.
     {
-      sourceCalendar: "WPISZ_NAZWE_LUB_ID_KALENDARZA",
+      sourceCalendar: "DataPoints",
       targetCalendar: "DailyLog",
+      moveUnmatchedAsIs: false,
       titleMappings: [
         { subject: "emails", newTitle: "emails", targetCalendar: "DailyLog" },
         { subject: "lunch", newTitle: "Break: Lunch", targetCalendar: "DailyLog" },
+        { subject: "Emails", newTitle: "emails", targetCalendar: "DailyLog" },
+
         { subject: "Hanging-out", newTitle: "Hanging-out", targetCalendar: "DailyLog" },
-        { subject: "*", newTitle: "Operations:{title}", targetCalendar: "DailyLog" }
+        { subject: "Hanging out", newTitle: "Hanging-out", targetCalendar: "DailyLog" },
+        { subject: "Hannging out", newTitle: "Hanging-out", targetCalendar: "DailyLog" },
+        { subject: "OOO", newTitle: "OOO", targetCalendar: "DailyLog" },
+        { subject: "Interview", newTitle: "Operations: Interview", targetCalendar: "DailyLog" },
+        { subject: "121", newTitle: "Operations: 121", targetCalendar: "DailyLog" },
+        { subject: "Promos", newTitle: "Operations: Promos", targetCalendar: "DailyLog" },
+        { subject: "Grad", newTitle: "Operations: Grad", targetCalendar: "DailyLog" },
+        { subject: "UAS planning", newTitle: "Operations: UAS planning", targetCalendar: "DailyLog" },
+        { subject: "CLAP planning", newTitle: "Operations: CLAP planning", targetCalendar: "DailyLog" },
+        { subject: "Promotions", newTitle: "Operations: Promotions", targetCalendar: "DailyLog" },
+        { subject: "Planning", newTitle: "Operations: Planning", targetCalendar: "DailyLog" },
+        { subject: "Checkins", newTitle: "Operations: Checkins", targetCalendar: "DailyLog" },
+        { subject: "Chiron", newTitle: "Operations: Chiron", targetCalendar: "DailyLog" },
+        { subject: "Emails review", newTitle: "Emails", targetCalendar: "DailyLog" },
+        { subject: "sniadanie herbata", newTitle: "Emails", targetCalendar: "DailyLog" },
+        { subject: "Coffe with Krzysztof", newTitle: "Emails", targetCalendar: "DailyLog" },
+
+        // Domyślne dopasowanie dla wszystkich pozostałych tytułów:
+        { subject: "*", newTitle: "Operations: {title}", targetCalendar: "DailyLog" }
       ]
     }
   ]
@@ -282,7 +306,7 @@ function consolidateFindTitleMapping_(oldTitle, titleMappings) {
   var normalized = (oldTitle || "").trim().toLowerCase();
   var wildcardFallback = null;
 
-  // 1. Najpierw szukamy dokładnego dopasowania po tytule (z pominięciem wieloznacznego "*")
+  // 1. Najpierw sprawdzamy wszystkie konkretne tytuły (pomijając wieloznaczne "*")
   for (var i = 0; i < titleMappings.length; i++) {
     var m = titleMappings[i];
     if (!m || m.subject === undefined || m.subject === null) {
@@ -300,7 +324,7 @@ function consolidateFindTitleMapping_(oldTitle, titleMappings) {
     }
   }
 
-  // 2. Jeśli żaden konkretny tytuł nie pasował, zwracamy regułę domyślną subject: "*" (jeśli zdefiniowana)
+  // 2. Jeśli żaden konkretny tytuł nie pasował, używamy reguły domyślnej subject: "*"
   return wildcardFallback;
 }
 
@@ -318,7 +342,7 @@ function consolidateResolveMappedTitle_(oldTitle, mapping, separator) {
     return tpl;
   }
 
-  // Szablon z {title}, np. "Operations:{title}" lub "Operations: {title}"
+  // Szablon z {title}, np. "Operations: {title}"
   var prefixPart = tpl.replace(/\$?\{title\}.*$/i, "").replace(/[:\s]+$/, "").trim();
   if (!oldTitle) {
     return prefixPart || tpl.replace(placeholderRegex, "").trim();
