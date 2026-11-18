@@ -14,11 +14,11 @@
 const CONSOLIDATE_CONFIG = {
   // Zakres dat (włącznie), z którego wydarzenia mają zostać przeniesione.
   // Dla samego czerwca 2025 możesz ustawić: startDate: "2025-06-01", endDate: "2025-06-30".
-  startDate: "2025-01-01",
-  endDate: "2025-12-31",
+  startDate: "2025-01-13",
+  endDate: "2025-01-18",
 
   // Domyślny kalendarz docelowy (nazwa kalendarza z Google Calendar LUB jego pełne CalendarId).
-  defaultTargetCalendar: "DataPoints",
+  defaultTargetCalendar: "DailyLog",
 
   // Separator między prefiksem a dotychczasowym tytułem wydarzenia (":" daje np. "SelfDevelopment:Coding").
   titleSeparator: ":",
@@ -38,6 +38,27 @@ const CONSOLIDATE_CONFIG = {
     {
       sourceCalendar: "Operations",
       titlePrefix: "Operations"
+    },
+    {
+      sourceCalendar: "TopDown",
+      titlePrefix: "TopDown"
+    },
+
+    // Reguła mapowania po tytule wydarzenia (subject):
+    // Wpisz w sourceCalendar nazwę lub ID tego dodatkowego kalendarza.
+    // Domyślnie wszystko z tego kalendarza trafia do targetCalendar ("DailyLog"),
+    // a w poszczególnych pozycjach titleMappings możesz też opcjonalnie nadpisać targetCalendar dla wybranego tytułu.
+    {
+      sourceCalendar: "WPISZ_NAZWE_LUB_ID_KALENDARZA",
+      targetCalendar: "DailyLog",
+      // false = wydarzenia o tytule spoza titleMappings zostaną bezpiecznie pominięte i wylistowane w podsumowaniu logu;
+      // true  = niezmapowane wydarzenia również zostaną przeniesione do targetCalendar bez zmiany tytułu.
+      moveUnmatchedAsIs: false,
+      titleMappings: [
+        { subject: "emails", newTitle: "emails", targetCalendar: "DailyLog" },
+        { subject: "lunch", newTitle: "Break: Lunch", targetCalendar: "DailyLog" },
+        { subject: "Hanging-out", newTitle: "Hanging-out", targetCalendar: "DailyLog" }
+      ]
     }
   ]
 };
@@ -90,12 +111,14 @@ function consolidateCalendarsRun_(dryRun) {
 
   var totalFound = 0;
   var totalMoved = 0;
+  var totalSkipped = 0;
   var totalFailed = 0;
   var perCalendarSummary = [];
 
   for (var r = 0; r < CONSOLIDATE_CONFIG.rules.length; r++) {
     var rule = CONSOLIDATE_CONFIG.rules[r];
-    var targetSpec = rule.targetCalendar || CONSOLIDATE_CONFIG.defaultTargetCalendar;
+    var defaultRuleTargetSpec = rule.targetCalendar || CONSOLIDATE_CONFIG.defaultTargetCalendar;
+    var hasTitleMappings = Array.isArray(rule.titleMappings);
 
     var sourceCal = consolidateResolveCalendar_(rule.sourceCalendar, allCalendars);
     if (!sourceCal) {
@@ -108,16 +131,16 @@ function consolidateCalendarsRun_(dryRun) {
       continue;
     }
 
-    var targetCal = consolidateResolveCalendar_(targetSpec, allCalendars);
-    if (!targetCal) {
+    var defaultRuleTargetCal = consolidateResolveCalendar_(defaultRuleTargetSpec, allCalendars);
+    if (!defaultRuleTargetCal) {
       throw new Error(
-        "Nie znaleziono kalendarza docelowego: \"" + targetSpec + "\". " +
+        "Nie znaleziono kalendarza docelowego: \"" + defaultRuleTargetSpec + "\". " +
         "Uruchom listAllMyCalendars(), aby sprawdzić dokładną nazwę lub ID. Dostępne: " +
         allCalendars.map(function (c) { return "\"" + c.name + "\""; }).join(", ")
       );
     }
 
-    if (sourceCal.id === targetCal.id) {
+    if (!hasTitleMappings && sourceCal.id === defaultRuleTargetCal.id) {
       console.warn("Kalendarz źródłowy i docelowy są identyczne (" + sourceCal.name + ") — pomijam.");
       continue;
     }
@@ -127,11 +150,15 @@ function consolidateCalendarsRun_(dryRun) {
 
     console.log(
       "--- Kalendarz [" + (r + 1) + "/" + CONSOLIDATE_CONFIG.rules.length + "]: \"" +
-      sourceCal.name + "\" -> \"" + targetCal.name + "\" | Znaleziono wydarzeń: " + events.length
+      sourceCal.name + "\" -> domyślnie \"" + defaultRuleTargetCal.name + "\"" +
+      (hasTitleMappings ? " (mapowanie wg tytułu)" : "") +
+      " | Znaleziono wydarzeń: " + events.length
     );
 
     var calMoved = 0;
+    var calSkipped = 0;
     var calFailed = 0;
+    var unmatchedBySubject = {};
 
     for (var i = 0; i < events.length; i++) {
       var ev = events[i];
@@ -141,13 +168,45 @@ function consolidateCalendarsRun_(dryRun) {
 
       totalFound++;
       var oldTitle = (ev.summary || "").trim();
-      var newTitle = consolidateBuildNewTitle_(oldTitle, prefix, separator);
       var whenLabel = (ev.start && (ev.start.dateTime || ev.start.date)) || "?";
+      var newTitle = null;
+      var effectiveTargetCal = defaultRuleTargetCal;
+
+      if (hasTitleMappings) {
+        var matchedMapping = consolidateFindTitleMapping_(oldTitle, rule.titleMappings);
+        if (matchedMapping) {
+          newTitle = matchedMapping.newTitle !== undefined ? matchedMapping.newTitle : oldTitle;
+          if (matchedMapping.targetCalendar) {
+            var overrideCal = consolidateResolveCalendar_(matchedMapping.targetCalendar, allCalendars);
+            if (!overrideCal) {
+              throw new Error(
+                "Nie znaleziono kalendarza docelowego \"" + matchedMapping.targetCalendar +
+                "\" w titleMappings dla tytułu \"" + matchedMapping.subject + "\". Dostępne: " +
+                allCalendars.map(function (c) { return "\"" + c.name + "\""; }).join(", ")
+              );
+            }
+            effectiveTargetCal = overrideCal;
+          }
+        } else if (rule.moveUnmatchedAsIs) {
+          newTitle = oldTitle;
+        } else {
+          var keyLabel = oldTitle || "(pusty tytuł)";
+          unmatchedBySubject[keyLabel] = (unmatchedBySubject[keyLabel] || 0) + 1;
+          console.log(
+            "  [POMINIĘTO - brak w titleMappings] " + whenLabel + " | \"" + oldTitle + "\""
+          );
+          calSkipped++;
+          totalSkipped++;
+          continue;
+        }
+      } else {
+        newTitle = consolidateBuildNewTitle_(oldTitle, prefix, separator);
+      }
 
       if (dryRun) {
         console.log(
           "  [DRY-RUN] " + whenLabel + " | \"" + oldTitle + "\" => \"" + newTitle + "\"" +
-          " (do: " + targetCal.name + ")"
+          " (do: " + effectiveTargetCal.name + ")"
         );
         calMoved++;
         totalMoved++;
@@ -155,9 +214,21 @@ function consolidateCalendarsRun_(dryRun) {
       }
 
       try {
-        consolidateMoveAndRenameEvent_(sourceCal.id, targetCal.id, ev.id, newTitle);
+        if (sourceCal.id === effectiveTargetCal.id) {
+          if (oldTitle !== newTitle) {
+            Calendar.Events.patch(
+              { summary: newTitle },
+              sourceCal.id,
+              ev.id,
+              { sendUpdates: "none" }
+            );
+          }
+        } else {
+          consolidateMoveAndRenameEvent_(sourceCal.id, effectiveTargetCal.id, ev.id, newTitle);
+        }
         console.log(
-          "  [OK] " + whenLabel + " | \"" + oldTitle + "\" => \"" + newTitle + "\""
+          "  [OK] " + whenLabel + " | \"" + oldTitle + "\" => \"" + newTitle + "\"" +
+          " (do: " + effectiveTargetCal.name + ")"
         );
         calMoved++;
         totalMoved++;
@@ -174,11 +245,23 @@ function consolidateCalendarsRun_(dryRun) {
       }
     }
 
+    var unmatchedKeys = Object.keys(unmatchedBySubject);
+    if (unmatchedKeys.length > 0) {
+      var unmatchedSummaryText = unmatchedKeys
+        .map(function (k) { return "\"" + k + "\" (" + unmatchedBySubject[k] + "x)"; })
+        .join(", ");
+      console.warn(
+        "  [UWAGA] Pominięte niezmapowane tytuły w \"" + sourceCal.name + "\": " + unmatchedSummaryText
+      );
+    }
+
     perCalendarSummary.push({
       source: sourceCal.name,
-      target: targetCal.name,
+      defaultTarget: defaultRuleTargetCal.name,
       eventsProcessed: calMoved,
-      eventsFailed: calFailed
+      eventsSkippedUnmatched: calSkipped,
+      eventsFailed: calFailed,
+      unmatchedTitles: unmatchedBySubject
     });
   }
 
@@ -188,12 +271,28 @@ function consolidateCalendarsRun_(dryRun) {
     endDate: CONSOLIDATE_CONFIG.endDate,
     totalFound: totalFound,
     totalProcessed: totalMoved,
+    totalSkippedUnmatched: totalSkipped,
     totalFailed: totalFailed,
     calendars: perCalendarSummary
   };
 
   console.log("=== PODSUMOWANIE ===", JSON.stringify(summary, null, 2));
   return summary;
+}
+
+function consolidateFindTitleMapping_(oldTitle, titleMappings) {
+  var normalized = (oldTitle || "").trim().toLowerCase();
+  for (var i = 0; i < titleMappings.length; i++) {
+    var m = titleMappings[i];
+    if (!m || m.subject === undefined || m.subject === null) {
+      continue;
+    }
+    var subj = m.subject.toString().trim().toLowerCase();
+    if (normalized === subj) {
+      return m;
+    }
+  }
+  return null;
 }
 
 function consolidateBuildNewTitle_(oldTitle, prefix, separator) {
@@ -203,7 +302,8 @@ function consolidateBuildNewTitle_(oldTitle, prefix, separator) {
   // Zabezpieczenie przed podwójnym dodaniem prefiksu (np. gdyby tytuł miał już "SelfDevelopment:...")
   var normalizedLower = oldTitle.toLowerCase();
   var checkColon = (prefix + ":").toLowerCase();
-  if (normalizedLower.indexOf(checkColon) === 0) {
+  var checkColonSpace = (prefix + ": ").toLowerCase();
+  if (normalizedLower.indexOf(checkColon) === 0 || normalizedLower.indexOf(checkColonSpace) === 0) {
     return oldTitle;
   }
   return prefix + separator + oldTitle;
