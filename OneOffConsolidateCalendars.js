@@ -46,18 +46,16 @@ const CONSOLIDATE_CONFIG = {
 
     // Reguła mapowania po tytule wydarzenia (subject):
     // Wpisz w sourceCalendar nazwę lub ID tego dodatkowego kalendarza.
-    // Domyślnie wszystko z tego kalendarza trafia do targetCalendar ("DailyLog"),
-    // a w poszczególnych pozycjach titleMappings możesz też opcjonalnie nadpisać targetCalendar dla wybranego tytułu.
+    // Użyj subject: "*" jako reguły domyślnej (fallback) dla wszystkich pozostałych tytułów,
+    // a znacznik {title} w newTitle zostanie zastąpiony dotychczasowym tytułem wydarzenia.
     {
       sourceCalendar: "WPISZ_NAZWE_LUB_ID_KALENDARZA",
       targetCalendar: "DailyLog",
-      // false = wydarzenia o tytule spoza titleMappings zostaną bezpiecznie pominięte i wylistowane w podsumowaniu logu;
-      // true  = niezmapowane wydarzenia również zostaną przeniesione do targetCalendar bez zmiany tytułu.
-      moveUnmatchedAsIs: false,
       titleMappings: [
         { subject: "emails", newTitle: "emails", targetCalendar: "DailyLog" },
         { subject: "lunch", newTitle: "Break: Lunch", targetCalendar: "DailyLog" },
-        { subject: "Hanging-out", newTitle: "Hanging-out", targetCalendar: "DailyLog" }
+        { subject: "Hanging-out", newTitle: "Hanging-out", targetCalendar: "DailyLog" },
+        { subject: "*", newTitle: "Operations:{title}", targetCalendar: "DailyLog" }
       ]
     }
   ]
@@ -175,7 +173,7 @@ function consolidateCalendarsRun_(dryRun) {
       if (hasTitleMappings) {
         var matchedMapping = consolidateFindTitleMapping_(oldTitle, rule.titleMappings);
         if (matchedMapping) {
-          newTitle = matchedMapping.newTitle !== undefined ? matchedMapping.newTitle : oldTitle;
+          newTitle = consolidateResolveMappedTitle_(oldTitle, matchedMapping, separator);
           if (matchedMapping.targetCalendar) {
             var overrideCal = consolidateResolveCalendar_(matchedMapping.targetCalendar, allCalendars);
             if (!overrideCal) {
@@ -282,17 +280,58 @@ function consolidateCalendarsRun_(dryRun) {
 
 function consolidateFindTitleMapping_(oldTitle, titleMappings) {
   var normalized = (oldTitle || "").trim().toLowerCase();
+  var wildcardFallback = null;
+
+  // 1. Najpierw szukamy dokładnego dopasowania po tytule (z pominięciem wieloznacznego "*")
   for (var i = 0; i < titleMappings.length; i++) {
     var m = titleMappings[i];
     if (!m || m.subject === undefined || m.subject === null) {
       continue;
     }
-    var subj = m.subject.toString().trim().toLowerCase();
-    if (normalized === subj) {
+    var subj = m.subject.toString().trim();
+    if (subj === "*") {
+      if (!wildcardFallback) {
+        wildcardFallback = m;
+      }
+      continue;
+    }
+    if (normalized === subj.toLowerCase()) {
       return m;
     }
   }
-  return null;
+
+  // 2. Jeśli żaden konkretny tytuł nie pasował, zwracamy regułę domyślną subject: "*" (jeśli zdefiniowana)
+  return wildcardFallback;
+}
+
+function consolidateResolveMappedTitle_(oldTitle, mapping, separator) {
+  if (mapping.titlePrefix) {
+    return consolidateBuildNewTitle_(oldTitle, mapping.titlePrefix.toString().trim(), separator);
+  }
+  if (mapping.newTitle === undefined || mapping.newTitle === null) {
+    return oldTitle;
+  }
+
+  var tpl = mapping.newTitle.toString();
+  var placeholderRegex = /\$?\{title\}/gi;
+  if (!placeholderRegex.test(tpl)) {
+    return tpl;
+  }
+
+  // Szablon z {title}, np. "Operations:{title}" lub "Operations: {title}"
+  var prefixPart = tpl.replace(/\$?\{title\}.*$/i, "").replace(/[:\s]+$/, "").trim();
+  if (!oldTitle) {
+    return prefixPart || tpl.replace(placeholderRegex, "").trim();
+  }
+  if (prefixPart) {
+    var lowerOld = oldTitle.toLowerCase();
+    var lowerPrefixColon = (prefixPart + ":").toLowerCase();
+    var lowerPrefixColonSpace = (prefixPart + ": ").toLowerCase();
+    if (lowerOld.indexOf(lowerPrefixColon) === 0 || lowerOld.indexOf(lowerPrefixColonSpace) === 0) {
+      return oldTitle;
+    }
+  }
+  return tpl.replace(placeholderRegex, oldTitle);
 }
 
 function consolidateBuildNewTitle_(oldTitle, prefix, separator) {
