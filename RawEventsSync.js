@@ -224,6 +224,9 @@ function rawSyncApplyMutations_(mutations) {
         failed++;
         console.warn("Unknown mutation action:", JSON.stringify(cmd));
       }
+      if (mutations.length > 20) {
+        Utilities.sleep(50);
+      }
     } catch (err) {
       failed++;
       console.error("Mutation failed:", JSON.stringify(cmd), "Error:", err);
